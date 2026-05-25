@@ -30,7 +30,7 @@ echo ""
 
 # ── 2. Apply database schema ──────────────────────────────────
 echo "→ Applying database schema..."
-node node_modules/.bin/prisma db push --skip-generate
+./node_modules/.bin/prisma db push --skip-generate
 echo "  ✓ Schema applied"
 echo ""
 
