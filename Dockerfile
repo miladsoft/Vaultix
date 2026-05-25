@@ -44,13 +44,9 @@ COPY --from=builder /app/.next/static ./.next/static
 # Prisma schema + pre-built seed script
 COPY --from=builder /app/prisma ./prisma
 
-# Prisma CLI + schema-engine (needed for db push at startup)
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma/engines ./node_modules/@prisma/engines
-
-# bcryptjs for seed (may not be included in standalone trace)
-COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+# Runtime dependencies not always included in Next.js standalone traces.
+# Keep pnpm's symlinked dependency layout intact for Prisma CLI engines and seed dependencies.
+COPY --from=builder /app/node_modules ./node_modules
 
 # Startup script
 COPY scripts/entrypoint.sh ./entrypoint.sh
