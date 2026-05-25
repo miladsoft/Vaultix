@@ -16,13 +16,9 @@ RUN npm install -g pnpm@10 && \
 
 COPY . .
 
-# Generate Prisma client + compile seed + build app
+# Generate Prisma client + build app
 RUN ./node_modules/.bin/prisma generate && \
     node -e "try { require('./node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node'); console.log('OK') } catch(e) { console.error('FAIL:', e.message) }" && \
-    ./node_modules/.bin/esbuild prisma/seed.ts \
-        --bundle --platform=node --format=cjs \
-        --external:@prisma/client --external:bcryptjs \
-        --outfile=prisma/seed.js && \
     pnpm build
 
 # ─── Runner ──────────────────────────────────────────────────

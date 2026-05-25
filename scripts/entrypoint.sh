@@ -11,11 +11,12 @@ echo ""
 echo "→ Waiting for database..."
 MAX_RETRIES=30
 RETRY=0
-until node -e "
-  const { Client } = require('pg');
-  const c = new Client({ connectionString: process.env.DATABASE_URL });
-  c.connect().then(() => { c.end(); process.exit(0); }).catch(() => process.exit(1));
-" 2>/dev/null; do
+until pg_isready \
+  -h "${POSTGRES_HOST:-postgres}" \
+  -p "${POSTGRES_PORT:-5432}" \
+  -U "${POSTGRES_USER:-vaultix}" \
+  -d "${POSTGRES_DB:-vaultix}" \
+  -q 2>/dev/null; do
   RETRY=$((RETRY + 1))
   if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
     echo "✗ Database not reachable after ${MAX_RETRIES} attempts. Aborting."
