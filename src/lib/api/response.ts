@@ -1,7 +1,15 @@
 import type { ApiResponse } from '@/types'
 
+function serializeForJson<T>(value: T): T {
+  return JSON.parse(
+    JSON.stringify(value, (_key, currentValue) =>
+      typeof currentValue === 'bigint' ? currentValue.toString() : currentValue,
+    ),
+  ) as T
+}
+
 export function ok<T>(data: T, status = 200): Response {
-  const body: ApiResponse<T> = { success: true, data }
+  const body: ApiResponse<T> = { success: true, data: serializeForJson(data) }
   return Response.json(body, { status })
 }
 
