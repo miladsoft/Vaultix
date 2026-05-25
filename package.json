@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
     "worker:pdf": "tsx workers/pdf-processor.ts",
     "worker:cleanup": "tsx workers/cleanup.ts"
   },
