@@ -141,11 +141,11 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
   return (
     <div
       ref={containerRef}
-      className="flex h-dvh select-none bg-slate-950"
+      className="flex h-dvh flex-col select-none overflow-hidden bg-slate-950"
       style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      <header className="flex flex-col gap-3 border-b border-slate-800/80 bg-slate-950/90 px-4 py-3 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+      <header className="z-20 flex shrink-0 flex-col gap-3 border-b border-slate-800/80 bg-slate-950/90 px-4 py-3 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-400/10 text-teal-300 ring-1 ring-teal-400/20">
             <FileText className="h-5 w-5" />
@@ -155,7 +155,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
             <span className="text-xs text-slate-500">Session-bound secure preview</span>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 text-sm text-slate-400">
           <span className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs">
             Page {currentPage} / {documentMeta.pageCount}
           </span>
@@ -179,7 +179,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
         </div>
       </header>
 
-      <main className="relative flex flex-1 items-center justify-center overflow-auto bg-[radial-gradient(circle_at_center,rgba(15,23,42,0.9),#020617_72%)] p-3 sm:p-5">
+      <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-[radial-gradient(circle_at_center,rgba(15,23,42,0.9),#020617_72%)] p-3 sm:p-5">
         {isBlurred && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-xl">
             <div className="max-w-sm rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center shadow-2xl">
@@ -200,7 +200,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
         >
           <canvas
             ref={canvasRef}
-            className="max-h-[calc(100dvh-226px)] max-w-full rounded-lg object-contain sm:max-h-[calc(100dvh-170px)]"
+            className="block max-h-[calc(100dvh-230px)] max-w-full rounded-lg object-contain sm:max-h-[calc(100dvh-172px)]"
           />
           {/* Anti-screenshot overlay — transparent but breaks copy-paste */}
           <div
@@ -210,7 +210,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
         </div>
       </main>
 
-      <footer className="flex flex-wrap items-center justify-center gap-2 border-t border-slate-800/80 bg-slate-950/90 px-3 py-3 backdrop-blur-xl sm:gap-3 sm:px-4">
+      <footer className="z-20 flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-slate-800/80 bg-slate-950/90 px-3 py-3 backdrop-blur-xl sm:gap-3 sm:px-4">
         <button
           onClick={() => goTo(1)}
           disabled={currentPage === 1}
