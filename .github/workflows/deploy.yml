@@ -1,0 +1,89 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy LockDocs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            DEPLOY_PATH="${SERVER_DEPLOY_PATH:-$HOME/LockDocs}"
+            cd "$DEPLOY_PATH"
+
+            echo "==> [1/7] Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> [2/7] Ensuring external proxy network exists..."
+            docker network inspect proxy >/dev/null 2>&1 || docker network create proxy
+
+            echo "==> [3/7] Starting data services..."
+            docker compose up -d postgres redis minio
+
+            echo "==> Waiting for Postgres..."
+            for i in $(seq 1 12); do
+              if docker compose exec -T postgres sh -c 'pg_isready -U "$POSTGRES_USER"' >/dev/null 2>&1; then
+                echo "Postgres is ready."
+                break
+              fi
+
+              if [ "$i" -eq 12 ]; then
+                echo "ERROR: Postgres did not become ready."
+                docker compose logs --tail=50 postgres
+                exit 1
+              fi
+
+              sleep 5
+            done
+
+            echo "==> [4/7] Building new images..."
+            docker compose build --pull app worker-pdf worker-cleanup
+
+            echo "==> [5/7] Running database migrations..."
+            docker compose run --rm app npx prisma migrate deploy
+
+            echo "==> [6/7] Rolling out app and workers..."
+            docker compose up -d --no-deps --remove-orphans app worker-pdf worker-cleanup
+
+            echo "==> [7/7] Checking app health..."
+            for i in $(seq 1 18); do
+              if docker compose exec -T app sh -c 'wget -q --spider http://localhost:3000/api/health || curl -fsS http://localhost:3000/api/health' >/dev/null 2>&1; then
+                echo "App is healthy — deploy complete."
+                break
+              fi
+
+              if [ "$i" -eq 18 ]; then
+                echo "ERROR: App failed health check. Last 50 log lines:"
+                docker compose logs --tail=50 app
+                exit 1
+              fi
+
+              echo "Health check attempt $i/18 failed. Retrying..."
+              sleep 5
+            done
+
+            echo "==> Cleaning up unused images..."
+            docker image prune -f --filter "until=24h"
+
+            echo "Deployment finished successfully."
