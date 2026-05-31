@@ -63,7 +63,21 @@ export async function GET(req: Request): Promise<Response> {
       ipAddress,
       sessionId,
     )
-    imageBuffer = await applyWatermark(pageBuffer, watermarkConfig)
+
+    let watermarkApplied = false
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        imageBuffer = await applyWatermark(pageBuffer, watermarkConfig)
+        watermarkApplied = true
+        break
+      } catch (e) {
+        console.error(`[watermark] attempt ${attempt + 1} failed for page ${pageNumber} of share ${share.id}:`, e)
+      }
+    }
+
+    if (!watermarkApplied) {
+      return err('Page temporarily unavailable — watermark could not be applied', 503)
+    }
   }
 
   await logAudit({

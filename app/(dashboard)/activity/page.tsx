@@ -5,7 +5,7 @@ import { formatDate } from '@/lib/utils'
 import { clampPage, getPage, getPageCount, Pagination } from '@/components/ui/pagination'
 import { EmptyState, PageHeader, PageShell, Surface } from '@/components/ui/surface'
 
-export const metadata = { title: 'Activity Log | Vaultix' }
+export const metadata = { title: 'Activity Log | SBC Files' }
 
 const ACTION_LABELS: Record<string, { label: string; color: string }> = {
   DOCUMENT_VIEWED: { label: 'Viewed', color: 'text-blue-300' },

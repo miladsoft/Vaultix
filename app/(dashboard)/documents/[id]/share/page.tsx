@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db/client'
 import { ShareForm } from './ShareForm'
 import { PageHeader, PageShell, Surface } from '@/components/ui/surface'
 
-export const metadata = { title: 'Share Document | Vaultix' }
+export const metadata = { title: 'Share Document | SBC Files' }
 
 interface Props {
   params: Promise<{ id: string }>

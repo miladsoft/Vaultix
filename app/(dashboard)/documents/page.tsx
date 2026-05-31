@@ -6,7 +6,7 @@ import { formatBytes, formatDate } from '@/lib/utils'
 import { clampPage, getPage, getPageCount, Pagination } from '@/components/ui/pagination'
 import { EmptyState, PageHeader, PageShell, StatusBadge, Surface } from '@/components/ui/surface'
 
-export const metadata = { title: 'Documents | Vaultix' }
+export const metadata = { title: 'Documents | SBC Files' }
 
 const PAGE_SIZE = 12
 

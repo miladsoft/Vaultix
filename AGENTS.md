@@ -21,7 +21,7 @@ Tech Stack:
 - Production-ready clean architecture
 
 Project Name:
-Vaultix
+SBC Files
 
 Main Goal:
 Allow users to securely upload and share sensitive documents with advanced restrictions such as:

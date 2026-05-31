@@ -48,7 +48,7 @@ export function Sidebar() {
             <Shield className="h-5 w-5" />
           </div>
           <div>
-            <span className="block font-semibold leading-none text-white">Vaultix</span>
+            <span className="block font-semibold leading-none text-white">SBC Files</span>
             <span className="text-[11px] text-slate-500">Secure data room</span>
           </div>
         </Link>
@@ -69,7 +69,7 @@ export function Sidebar() {
               <Shield className="h-5 w-5" />
             </div>
             <div>
-              <span className="block text-lg font-semibold leading-none text-white">Vaultix</span>
+              <span className="block text-lg font-semibold leading-none text-white">SBC Files</span>
               <span className="text-xs text-slate-500">Enterprise document DRM</span>
             </div>
           </Link>

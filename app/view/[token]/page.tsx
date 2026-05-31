@@ -10,7 +10,7 @@ interface Props {
 }
 
 export const metadata: Metadata = {
-  title: 'Secure Document | Vaultix',
+  title: 'Secure Document | SBC Files',
   robots: 'noindex, nofollow',
 }
 

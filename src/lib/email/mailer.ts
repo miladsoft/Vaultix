@@ -24,7 +24,7 @@ function getTransport() {
   })
 }
 
-const FROM = process.env.SMTP_FROM ?? 'Vaultix <noreply@vaultix.io>'
+const FROM = process.env.SMTP_FROM ?? 'SBC Files <noreply@sbcfiles.io>'
 
 export async function sendOtpEmail(email: string, code: string): Promise<void> {
   const transport = getTransport()
@@ -36,7 +36,7 @@ export async function sendOtpEmail(email: string, code: string): Promise<void> {
   await transport.sendMail({
     from: FROM,
     to: email,
-    subject: 'Your Vaultix Access Code',
+    subject: 'Your SBC Files Access Code',
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
         <h2 style="color:#0f172a">Secure Document Access</h2>

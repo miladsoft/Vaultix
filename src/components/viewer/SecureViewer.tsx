@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Download, FileText, Maximize2, ShieldAlert } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Download, FileText, Loader2, Maximize2, RefreshCw, ShieldAlert } from 'lucide-react'
 import { v4 as uuidv4 } from 'uuid'
 import type { DocumentMeta } from '@/types'
 
@@ -12,12 +12,17 @@ interface SecureViewerProps {
   name?: string
 }
 
+const RETRY_DELAYS_MS = [800, 2000, 4000]
+
 export function SecureViewer({ document: documentMeta, token, email, name }: SecureViewerProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [isBlurred, setIsBlurred] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [sessionId] = useState(() => uuidv4())
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   // Block context menu, drag, keyboard shortcuts
   useEffect(() => {
@@ -58,11 +63,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
   // Blur on tab switch
   useEffect(() => {
     const handleVisibility = () => {
-      if (window.document.hidden) {
-        setIsBlurred(true)
-      } else {
-        setIsBlurred(false)
-      }
+      setIsBlurred(window.document.hidden)
     }
     window.document.addEventListener('visibilitychange', handleVisibility)
     return () => window.document.removeEventListener('visibilitychange', handleVisibility)
@@ -71,14 +72,11 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
   // DevTools detection via console timing
   useEffect(() => {
     let devToolsOpen = false
-    const threshold = 160
-
     const check = () => {
       const before = performance.now()
       console.profile()
       console.profileEnd()
-      const after = performance.now()
-      if (after - before > threshold && !devToolsOpen) {
+      if (performance.now() - before > 160 && !devToolsOpen) {
         devToolsOpen = true
         fetch('/api/viewer/suspicious', {
           method: 'POST',
@@ -87,13 +85,20 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
         }).catch(() => {})
       }
     }
-
     const id = setInterval(check, 3000)
     return () => clearInterval(id)
   }, [token, sessionId])
 
   const loadPage = useCallback(
     async (page: number) => {
+      // Cancel any in-flight request for a previous page
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      setIsLoading(true)
+      setLoadError(false)
+
       const canvas = canvasRef.current
       if (!canvas) return
 
@@ -105,28 +110,81 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
         ...(name && { name }),
       })
 
-      const res = await fetch(`/api/viewer/page?${params}`)
-      if (!res.ok) return
+      for (let attempt = 0; attempt < RETRY_DELAYS_MS.length + 1; attempt++) {
+        if (controller.signal.aborted) return
 
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const img = new Image()
+        try {
+          if (attempt > 0) {
+            await new Promise<void>((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt - 1]))
+            if (controller.signal.aborted) return
+          }
 
-      img.onload = () => {
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
-        canvas.width = img.width
-        canvas.height = img.height
-        ctx.drawImage(img, 0, 0)
-        URL.revokeObjectURL(url)
+          const res = await fetch(`/api/viewer/page?${params}`, {
+            signal: controller.signal,
+          })
+
+          if (!res.ok) {
+            // 503 = page render or watermark not ready — worth retrying
+            if (res.status === 503 && attempt < RETRY_DELAYS_MS.length) continue
+            throw new Error(`HTTP ${res.status}`)
+          }
+
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+
+          await new Promise<void>((resolve, reject) => {
+            const img = new Image()
+
+            img.onload = () => {
+              if (controller.signal.aborted) {
+                URL.revokeObjectURL(url)
+                reject(new DOMException('Aborted', 'AbortError'))
+                return
+              }
+              const ctx = canvas.getContext('2d')
+              if (!ctx) {
+                URL.revokeObjectURL(url)
+                reject(new Error('Canvas context unavailable'))
+                return
+              }
+              canvas.width = img.naturalWidth
+              canvas.height = img.naturalHeight
+              ctx.clearRect(0, 0, canvas.width, canvas.height)
+              ctx.drawImage(img, 0, 0)
+              URL.revokeObjectURL(url)
+              resolve()
+            }
+
+            img.onerror = () => {
+              URL.revokeObjectURL(url)
+              reject(new Error('Image decode failed'))
+            }
+
+            img.src = url
+          })
+
+          if (!controller.signal.aborted) {
+            setIsLoading(false)
+            setLoadError(false)
+          }
+          return
+        } catch (e) {
+          if ((e as Error).name === 'AbortError') return
+          if (attempt === RETRY_DELAYS_MS.length) {
+            setIsLoading(false)
+            setLoadError(true)
+          }
+        }
       }
-      img.src = url
     },
     [token, sessionId, email, name],
   )
 
   useEffect(() => {
     loadPage(currentPage)
+    return () => {
+      abortRef.current?.abort()
+    }
   }, [currentPage, loadPage])
 
   const goTo = (page: number) => {
@@ -195,13 +253,41 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
 
         <div
           className="relative rounded-lg bg-white shadow-2xl shadow-slate-950/60 ring-1 ring-slate-700/70"
-          style={{ pointerEvents: isBlurred ? 'none' : 'auto' }}
+          style={{ pointerEvents: isBlurred ? 'none' : 'auto', minWidth: 320, minHeight: 450 }}
           onClick={() => setIsBlurred(false)}
         >
           <canvas
             ref={canvasRef}
             className="block max-h-[calc(100dvh-230px)] max-w-full rounded-lg object-contain sm:max-h-[calc(100dvh-172px)]"
           />
+
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-slate-900/80 backdrop-blur-sm">
+              <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
+              <span className="text-sm text-slate-400">Loading page {currentPage}…</span>
+            </div>
+          )}
+
+          {/* Error overlay */}
+          {loadError && !isLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-lg bg-slate-900/90 backdrop-blur-sm">
+              <ShieldAlert className="h-8 w-8 text-red-400" />
+              <div className="text-center">
+                <p className="text-sm font-medium text-white">Failed to load page</p>
+                <p className="mt-1 text-xs text-slate-500">A temporary error occurred while rendering the page.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => loadPage(currentPage)}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-500 px-4 py-2 text-sm font-medium text-slate-950 transition-colors hover:bg-teal-400 focus-ring"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            </div>
+          )}
+
           {/* Anti-screenshot overlay — transparent but breaks copy-paste */}
           <div
             className="absolute inset-0 pointer-events-none"
@@ -213,14 +299,14 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
       <footer className="z-20 flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-slate-800/80 bg-slate-950/90 px-3 py-3 backdrop-blur-xl sm:gap-3 sm:px-4">
         <button
           onClick={() => goTo(1)}
-          disabled={currentPage === 1}
+          disabled={currentPage === 1 || isLoading}
           className="min-h-9 rounded-lg border border-slate-800 bg-slate-900 px-3 text-sm text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40 focus-ring"
         >
           First
         </button>
         <button
           onClick={() => goTo(currentPage - 1)}
-          disabled={currentPage === 1}
+          disabled={currentPage === 1 || isLoading}
           className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-800 bg-slate-900 px-3 text-sm text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40 focus-ring"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -241,7 +327,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
 
         <button
           onClick={() => goTo(currentPage + 1)}
-          disabled={currentPage === documentMeta.pageCount}
+          disabled={currentPage === documentMeta.pageCount || isLoading}
           className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-800 bg-slate-900 px-3 text-sm text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40 focus-ring"
         >
           Next
@@ -249,7 +335,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
         </button>
         <button
           onClick={() => goTo(documentMeta.pageCount)}
-          disabled={currentPage === documentMeta.pageCount}
+          disabled={currentPage === documentMeta.pageCount || isLoading}
           className="min-h-9 rounded-lg border border-slate-800 bg-slate-900 px-3 text-sm text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40 focus-ring"
         >
           Last

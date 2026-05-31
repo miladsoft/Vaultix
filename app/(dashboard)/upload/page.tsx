@@ -1,7 +1,7 @@
 import { UploadZone } from '@/components/upload/UploadZone'
 import { PageHeader, PageShell } from '@/components/ui/surface'
 
-export const metadata = { title: 'Upload Document | Vaultix' }
+export const metadata = { title: 'Upload Document | SBC Files' }
 
 export default function UploadPage() {
   return (

@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/utils'
 import { clampPage, getPage, getPageCount, Pagination } from '@/components/ui/pagination'
 import { MetricCard, PageHeader, PageShell, StatusBadge, Surface } from '@/components/ui/surface'
 
-export const metadata = { title: 'Admin | Vaultix' }
+export const metadata = { title: 'Admin | SBC Files' }
 
 const USERS_PAGE_SIZE = 12
 const ALERTS_PAGE_SIZE = 8

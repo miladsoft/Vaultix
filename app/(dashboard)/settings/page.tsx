@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db/client'
 import { formatBytes } from '@/lib/utils'
 import { PageHeader, PageShell, StatusBadge, Surface } from '@/components/ui/surface'
 
-export const metadata = { title: 'Settings | Vaultix' }
+export const metadata = { title: 'Settings | SBC Files' }
 
 export default async function SettingsPage() {
   const session = await getSession()

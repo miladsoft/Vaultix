@@ -2,28 +2,28 @@ services:
   # ─── PostgreSQL ─────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: vaultix-postgres
+    container_name: sbcfiles-postgres
     restart: unless-stopped
     expose:
       - "5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-vaultix}
-      POSTGRES_USER: ${POSTGRES_USER:-vaultix}
+      POSTGRES_DB: ${POSTGRES_DB:-sbcfiles}
+      POSTGRES_USER: ${POSTGRES_USER:-sbcfiles}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vaultix} -d ${POSTGRES_DB:-vaultix}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sbcfiles} -d ${POSTGRES_DB:-sbcfiles}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - vaultix-network
+      - sbcfiles-network
 
   # ─── Redis ──────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: vaultix-redis
+    container_name: sbcfiles-redis
     restart: unless-stopped
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme}
     volumes:
@@ -36,16 +36,16 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - vaultix-network
+      - sbcfiles-network
 
   # ─── MinIO (S3-compatible storage) ──────────────────────────
   minio:
     image: minio/minio:latest
-    container_name: vaultix-minio
+    container_name: sbcfiles-minio
     restart: unless-stopped
     command: server /data --console-address ':9001'
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vaultix_admin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sbcfiles_admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme_minio}
     volumes:
       - minio_data:/data
@@ -58,27 +58,27 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - vaultix-network
+      - sbcfiles-network
 
   # ─── MinIO Bucket Bootstrap ────────────────────────────────
   minio-init:
     image: minio/mc:latest
-    container_name: vaultix-minio-init
+    container_name: sbcfiles-minio-init
     restart: "no"
     depends_on:
       minio:
         condition: service_healthy
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-vaultix_admin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-sbcfiles_admin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme_minio}
-      S3_BUCKET: ${S3_BUCKET:-vaultix-documents}
+      S3_BUCKET: ${S3_BUCKET:-sbcfiles-documents}
     entrypoint: >
       /bin/sh -c "
-      mc alias set vaultix http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
-      mc mb --ignore-existing vaultix/$${S3_BUCKET}
+      mc alias set sbcfiles http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing sbcfiles/$${S3_BUCKET}
       "
     networks:
-      - vaultix-network
+      - sbcfiles-network
 
   # ─── Next.js App ────────────────────────────────────────────
   app:
@@ -88,7 +88,7 @@ services:
       target: runner
       args:
         NEXT_PUBLIC_APP_URL: https://${DOMAIN:-file.sbc.om}
-    container_name: vaultix-app
+    container_name: sbcfiles-app
     restart: unless-stopped
     env_file:
       - .env
@@ -107,20 +107,20 @@ services:
       NEXT_PUBLIC_APP_URL: https://${DOMAIN:-file.sbc.om}
 
       # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-vaultix}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-vaultix}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sbcfiles}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-sbcfiles}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER:-vaultix}
-      POSTGRES_DB: ${POSTGRES_DB:-vaultix}
+      POSTGRES_USER: ${POSTGRES_USER:-sbcfiles}
+      POSTGRES_DB: ${POSTGRES_DB:-sbcfiles}
 
       # Redis
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
 
       # MinIO / S3
       S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-vaultix_admin}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-sbcfiles_admin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-changeme_minio}
-      S3_BUCKET: ${S3_BUCKET:-vaultix-documents}
+      S3_BUCKET: ${S3_BUCKET:-sbcfiles-documents}
       S3_REGION: ${S3_REGION:-us-east-1}
     expose:
       - "3000"
@@ -140,7 +140,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - vaultix-network
+      - sbcfiles-network
       - proxy
 
   # ─── PDF Processing Worker ───────────────────────────────────
@@ -148,55 +148,55 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    container_name: vaultix-worker-pdf
+    container_name: sbcfiles-worker-pdf
     restart: unless-stopped
     env_file:
       - .env
     environment:
       WORKER_TYPE: pdf-processor
-      DATABASE_URL: postgresql://${POSTGRES_USER:-vaultix}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-vaultix}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sbcfiles}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-sbcfiles}
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
       S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-vaultix_admin}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-sbcfiles_admin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-changeme_minio}
-      S3_BUCKET: ${S3_BUCKET:-vaultix-documents}
+      S3_BUCKET: ${S3_BUCKET:-sbcfiles-documents}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - vaultix-network
+      - sbcfiles-network
 
   # ─── Cleanup Worker ──────────────────────────────────────────
   worker-cleanup:
     build:
       context: .
       dockerfile: Dockerfile.worker
-    container_name: vaultix-worker-cleanup
+    container_name: sbcfiles-worker-cleanup
     restart: unless-stopped
     env_file:
       - .env
     environment:
       WORKER_TYPE: cleanup
-      DATABASE_URL: postgresql://${POSTGRES_USER:-vaultix}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-vaultix}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sbcfiles}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-sbcfiles}
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
       S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-vaultix_admin}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-sbcfiles_admin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-changeme_minio}
-      S3_BUCKET: ${S3_BUCKET:-vaultix-documents}
+      S3_BUCKET: ${S3_BUCKET:-sbcfiles-documents}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - vaultix-network
+      - sbcfiles-network
 
 networks:
-  vaultix-network:
+  sbcfiles-network:
     external: false
-    name: vaultix-network
+    name: sbcfiles-network
   proxy:
     external: true
     name: proxy
@@ -204,10 +204,10 @@ networks:
 volumes:
   postgres_data:
     driver: local
-    name: vaultix-postgres-data
+    name: sbcfiles-postgres-data
   redis_data:
     driver: local
-    name: vaultix-redis-data
+    name: sbcfiles-redis-data
   minio_data:
     driver: local
-    name: vaultix-minio-data
+    name: sbcfiles-minio-data

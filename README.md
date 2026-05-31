@@ -1,4 +1,4 @@
-# Vaultix — Enterprise Secure Document Sharing Platform
+# SBC Files — Enterprise Secure Document Sharing Platform
 
 A production-grade DRM platform for sharing sensitive documents with advanced access control, watermarking, audit trails, and secure rendering. Similar to Digify, DocSend, and enterprise virtual data rooms.
 
@@ -68,7 +68,7 @@ A production-grade DRM platform for sharing sensitive documents with advanced ac
 ## Project Structure
 
 ```
-vaultix/
+sbcfiles/
 ├── app/                          # Next.js App Router
 │   ├── (auth)/                   # Login / Register (unauthenticated)
 │   ├── (dashboard)/              # Protected dashboard pages
@@ -144,7 +144,7 @@ docker compose exec app pnpm db:migrate
 ```bash
 # Via MinIO console at http://localhost:9001
 # Or via mc:
-docker compose exec minio mc mb local/vaultix-documents
+docker compose exec minio mc mb local/sbcfiles-documents
 ```
 
 The app is now running at `http://localhost` (via Nginx).

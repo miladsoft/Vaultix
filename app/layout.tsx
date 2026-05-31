@@ -5,9 +5,16 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: { default: 'Vaultix', template: '%s | Vaultix' },
+  title: { default: 'SBC Files', template: '%s | SBC Files' },
   description: 'Enterprise-grade Secure Document Sharing Platform',
   robots: 'noindex, nofollow',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '48x48' },
+    ],
+    shortcut: '/icon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

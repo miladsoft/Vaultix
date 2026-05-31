@@ -57,7 +57,7 @@ body {
 }
 
 /* Secure viewer - disable all user interactions */
-.vaultix-secure {
+.sbcfiles-secure {
   user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;

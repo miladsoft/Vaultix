@@ -164,7 +164,7 @@ const worker = new Worker(
       const rawKey = decryptKey(storageKey)
       const fileBuffer = await downloadFromS3(rawKey)
 
-      const tmpDir = join(tmpdir(), `vaultix-${documentId}`)
+      const tmpDir = join(tmpdir(), `sbcfiles-${documentId}`)
       await mkdir(tmpDir, { recursive: true })
 
       let pageCount = 1

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Background -->
+  <rect width="32" height="32" rx="8" fill="#0f172a"/>
+  <!-- Document body -->
+  <path d="M8 7 Q8 6 9 6 L19 6 L24 11 L24 26 Q24 27 23 27 L9 27 Q8 27 8 26 Z" fill="#134e4a"/>
+  <!-- Folded corner highlight -->
+  <path d="M19 6 L19 11 L24 11 Z" fill="#2dd4bf" opacity="0.4"/>
+  <line x1="19" y1="6" x2="24" y2="11" stroke="#2dd4bf" stroke-width="1" stroke-linecap="round"/>
+  <!-- Lock shackle -->
+  <path d="M13.5 17 L13.5 15 A2.5 2.5 0 0 1 18.5 15 L18.5 17" stroke="#2dd4bf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Lock body -->
+  <rect x="12" y="17" width="8" height="6" rx="1.5" fill="#2dd4bf"/>
+  <!-- Keyhole -->
+  <circle cx="16" cy="19.5" r="1.2" fill="#0f172a"/>
+  <rect x="15.4" y="19.5" width="1.2" height="1.8" rx="0.3" fill="#0f172a"/>
+</svg>

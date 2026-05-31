@@ -18,7 +18,7 @@ export function proxy(request: NextRequest): NextResponse {
     return NextResponse.next()
   }
 
-  const accessToken = request.cookies.get('vaultix_access')?.value
+  const accessToken = request.cookies.get('sbcfiles_access')?.value
 
   // Redirect unauthenticated users to login
   if (!accessToken && !pathname.startsWith('/api/')) {

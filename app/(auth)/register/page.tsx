@@ -60,7 +60,7 @@ export default function RegisterPage() {
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-400 text-slate-950">
                 <ShieldCheck className="h-5 w-5" />
               </div>
-              <span className="text-xl font-semibold text-white">Vaultix</span>
+              <span className="text-xl font-semibold text-white">SBC Files</span>
             </div>
             <p className="text-sm text-slate-400">Secure workspace</p>
           </div>

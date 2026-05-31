@@ -2,8 +2,8 @@ import { cookies } from 'next/headers'
 import { verifyAccessToken } from './jwt'
 import type { JwtPayload } from '@/types'
 
-const ACCESS_COOKIE = 'vaultix_access'
-const REFRESH_COOKIE = 'vaultix_refresh'
+const ACCESS_COOKIE = 'sbcfiles_access'
+const REFRESH_COOKIE = 'sbcfiles_refresh'
 
 export async function getSession(): Promise<JwtPayload | null> {
   const store = await cookies()
