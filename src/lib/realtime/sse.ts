@@ -19,6 +19,7 @@ export type RealtimeEvent =
   | { type: 'page_viewed'; shareId: string; sessionId: string; page: number }
   | { type: 'access_revoked'; shareId: string }
   | { type: 'suspicious_activity'; shareId: string; eventType: string }
+  | { type: 'document_status'; documentId: string; status: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED'; pageCount?: number }
 
 export async function publishEvent(
   channelKey: string,

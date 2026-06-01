@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/client'
 import { formatBytes, formatDate } from '@/lib/utils'
 import { clampPage, getPage, getPageCount, Pagination } from '@/components/ui/pagination'
 import { EmptyState, PageHeader, PageShell, StatusBadge, Surface } from '@/components/ui/surface'
+import { DocumentStatusWatcher } from '@/components/dashboard/DocumentStatusWatcher'
 
 export const metadata = { title: 'Documents | SBC Files' }
 
@@ -50,8 +51,13 @@ export default async function DocumentsPage({ searchParams }: Props) {
     FAILED: 'bg-red-400/10 text-red-300',
   }
 
+  const hasPendingDocuments = documents.some(
+    (doc: typeof documents[number]) => doc.status === 'PENDING' || doc.status === 'PROCESSING',
+  )
+
   return (
     <PageShell>
+      <DocumentStatusWatcher active={hasPendingDocuments} />
       <PageHeader
         eyebrow="Repository"
         title="Documents"

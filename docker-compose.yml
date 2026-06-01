@@ -52,6 +52,12 @@ services:
     expose:
       - "9000"
       - "9001"
+    # Host port mappings so `next dev`/workers running on the host (outside the
+    # Docker network) can reach MinIO at localhost. Containers still use the
+    # internal `minio` hostname.
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s

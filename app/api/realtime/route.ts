@@ -1,6 +1,6 @@
 import { requireSession } from '@/lib/auth/session'
-import { createSSEStream, documentChannel } from '@/lib/realtime/sse'
-import { unauthorized, err } from '@/lib/api/response'
+import { createSSEStream, documentChannel, userChannel } from '@/lib/realtime/sse'
+import { unauthorized } from '@/lib/api/response'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,9 +10,10 @@ export async function GET(req: Request): Promise<Response> {
 
   const url = new URL(req.url)
   const documentId = url.searchParams.get('documentId')
-  if (!documentId) return err('documentId is required')
 
-  const channel = documentChannel(documentId)
+  // Subscribe to a single document channel, or fall back to the
+  // session user's channel for live updates across all their documents.
+  const channel = documentId ? documentChannel(documentId) : userChannel(session.sub)
   const stream = createSSEStream(channel)
 
   return new Response(stream, {

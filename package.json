@@ -13,8 +13,8 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "worker:pdf": "tsx workers/pdf-processor.ts",
-    "worker:cleanup": "tsx workers/cleanup.ts"
+    "worker:pdf": "tsx --env-file=.env --env-file-if-exists=.env.local workers/pdf-processor.ts",
+    "worker:cleanup": "tsx --env-file=.env --env-file-if-exists=.env.local workers/cleanup.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1053.0",

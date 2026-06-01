@@ -25,7 +25,30 @@ const ALGORITHM = 'aes-256-gcm'
 const BUCKET = process.env.S3_BUCKET!
 
 const connection = new Redis(REDIS_URL, { maxRetriesPerRequest: null })
+const publisher = new Redis(REDIS_URL, { maxRetriesPerRequest: null })
 const prisma = new PrismaClient()
+
+type DocumentStatus = 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED'
+
+/**
+ * Publish a realtime document status change so dashboards update live
+ * (e.g. PROCESSING -> READY) without a manual page refresh.
+ * Channel keys MUST match src/lib/realtime/sse.ts.
+ */
+async function publishStatus(
+  userId: string | null,
+  documentId: string,
+  status: DocumentStatus,
+  pageCount?: number,
+): Promise<void> {
+  const payload = JSON.stringify({ type: 'document_status', documentId, status, pageCount })
+  try {
+    await publisher.publish(`doc:${documentId}`, payload)
+    if (userId) await publisher.publish(`user:${userId}`, payload)
+  } catch (e) {
+    console.error(`[worker] failed to publish status for ${documentId}:`, e)
+  }
+}
 const s3 = new S3Client({
   endpoint: process.env.S3_ENDPOINT,
   region: process.env.S3_REGION ?? 'us-east-1',
@@ -155,10 +178,17 @@ const worker = new Worker(
 
     console.log(`[worker] Processing document ${documentId}`)
 
+    const existing = await prisma.document.findUnique({
+      where: { id: documentId },
+      select: { userId: true },
+    })
+    const userId = existing?.userId ?? null
+
     await prisma.document.update({
       where: { id: documentId },
       data: { status: 'PROCESSING' },
     })
+    await publishStatus(userId, documentId, 'PROCESSING')
 
     try {
       const rawKey = decryptKey(storageKey)
@@ -256,6 +286,7 @@ const worker = new Worker(
         where: { id: documentId },
         data: { status: 'READY', pageCount },
       })
+      await publishStatus(userId, documentId, 'READY', pageCount)
 
       console.log(`[worker] Document ${documentId} processed: ${pageCount} pages`)
     } catch (error) {
@@ -267,6 +298,7 @@ const worker = new Worker(
           pages: { deleteMany: {} },
         },
       })
+      await publishStatus(userId, documentId, 'FAILED')
       throw error
     }
   },

@@ -14,10 +14,20 @@ interface SecureViewerProps {
 
 const RETRY_DELAYS_MS = [800, 2000, 4000]
 
+// A 503 means the page is rendered/watermarked on demand and is briefly
+// "not ready yet" (page still processing or watermark transiently failed).
+// We keep polling these for a generous window with capped backoff so the
+// viewer recovers on its own instead of forcing the user to refresh.
+const PREPARING_MAX_ATTEMPTS = 45
+const PREPARING_BACKOFF_MS = [600, 800, 1000, 1500, 2000, 3000]
+// Transient network/decode failures get a small bounded number of retries.
+const TRANSIENT_MAX_RETRIES = RETRY_DELAYS_MS.length
+
 export function SecureViewer({ document: documentMeta, token, email, name }: SecureViewerProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [isBlurred, setIsBlurred] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isPreparing, setIsPreparing] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [sessionId] = useState(() => uuidv4())
   const containerRef = useRef<HTMLDivElement>(null)
@@ -97,6 +107,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
       abortRef.current = controller
 
       setIsLoading(true)
+      setIsPreparing(false)
       setLoadError(false)
 
       const canvas = canvasRef.current
@@ -110,70 +121,98 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
         ...(name && { name }),
       })
 
-      for (let attempt = 0; attempt < RETRY_DELAYS_MS.length + 1; attempt++) {
+      const wait = (ms: number) =>
+        new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+      const renderBlob = (blob: Blob) =>
+        new Promise<void>((resolve, reject) => {
+          const url = URL.createObjectURL(blob)
+          const img = new Image()
+          img.onload = () => {
+            if (controller.signal.aborted) {
+              URL.revokeObjectURL(url)
+              reject(new DOMException('Aborted', 'AbortError'))
+              return
+            }
+            const ctx = canvas.getContext('2d')
+            if (!ctx) {
+              URL.revokeObjectURL(url)
+              reject(new Error('Canvas context unavailable'))
+              return
+            }
+            canvas.width = img.naturalWidth
+            canvas.height = img.naturalHeight
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            ctx.drawImage(img, 0, 0)
+            URL.revokeObjectURL(url)
+            resolve()
+          }
+          img.onerror = () => {
+            URL.revokeObjectURL(url)
+            reject(new Error('Image decode failed'))
+          }
+          img.src = url
+        })
+
+      let preparingAttempts = 0
+      let transientRetries = 0
+
+      // Single resilient loop: 503 (page/watermark not ready yet) is retried
+      // persistently with capped backoff; other failures get a few retries.
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
         if (controller.signal.aborted) return
 
         try {
-          if (attempt > 0) {
-            await new Promise<void>((resolve) => setTimeout(resolve, RETRY_DELAYS_MS[attempt - 1]))
-            if (controller.signal.aborted) return
-          }
-
           const res = await fetch(`/api/viewer/page?${params}`, {
             signal: controller.signal,
           })
 
+          if (res.status === 503) {
+            // Still preparing — keep waiting and show a dedicated state.
+            preparingAttempts++
+            if (preparingAttempts > PREPARING_MAX_ATTEMPTS) {
+              throw new Error('Preparation timed out')
+            }
+            if (!controller.signal.aborted) setIsPreparing(true)
+            const delay =
+              PREPARING_BACKOFF_MS[Math.min(preparingAttempts - 1, PREPARING_BACKOFF_MS.length - 1)]
+            await wait(delay)
+            continue
+          }
+
           if (!res.ok) {
-            // 503 = page render or watermark not ready — worth retrying
-            if (res.status === 503 && attempt < RETRY_DELAYS_MS.length) continue
+            // 403/404/410 etc. are terminal — no point retrying.
             throw new Error(`HTTP ${res.status}`)
           }
 
           const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-
-          await new Promise<void>((resolve, reject) => {
-            const img = new Image()
-
-            img.onload = () => {
-              if (controller.signal.aborted) {
-                URL.revokeObjectURL(url)
-                reject(new DOMException('Aborted', 'AbortError'))
-                return
-              }
-              const ctx = canvas.getContext('2d')
-              if (!ctx) {
-                URL.revokeObjectURL(url)
-                reject(new Error('Canvas context unavailable'))
-                return
-              }
-              canvas.width = img.naturalWidth
-              canvas.height = img.naturalHeight
-              ctx.clearRect(0, 0, canvas.width, canvas.height)
-              ctx.drawImage(img, 0, 0)
-              URL.revokeObjectURL(url)
-              resolve()
-            }
-
-            img.onerror = () => {
-              URL.revokeObjectURL(url)
-              reject(new Error('Image decode failed'))
-            }
-
-            img.src = url
-          })
+          await renderBlob(blob)
 
           if (!controller.signal.aborted) {
             setIsLoading(false)
+            setIsPreparing(false)
             setLoadError(false)
           }
           return
         } catch (e) {
           if ((e as Error).name === 'AbortError') return
-          if (attempt === RETRY_DELAYS_MS.length) {
+
+          // Bounded retries for transient network/decode errors.
+          const message = (e as Error).message
+          const isHttp = message.startsWith('HTTP ')
+          if (!isHttp && transientRetries < TRANSIENT_MAX_RETRIES) {
+            await wait(RETRY_DELAYS_MS[transientRetries])
+            transientRetries++
+            continue
+          }
+
+          if (!controller.signal.aborted) {
             setIsLoading(false)
+            setIsPreparing(false)
             setLoadError(true)
           }
+          return
         }
       }
     },
@@ -265,7 +304,12 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-slate-900/80 backdrop-blur-sm">
               <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
-              <span className="text-sm text-slate-400">Loading page {currentPage}…</span>
+              <span className="text-sm text-slate-400">
+                {isPreparing ? `Preparing secure page ${currentPage}…` : `Loading page ${currentPage}…`}
+              </span>
+              {isPreparing && (
+                <span className="text-xs text-slate-500">Rendering watermark &amp; protected preview</span>
+              )}
             </div>
           )}
 
