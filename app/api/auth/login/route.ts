@@ -9,6 +9,14 @@ import { logAudit, extractRequestMeta } from '@/lib/audit/logger'
 import { ok, err, unauthorized, tooManyRequests } from '@/lib/api/response'
 import { ACCESS_COOKIE, REFRESH_COOKIE, cookieOptions } from '@/lib/auth/session'
 
+const LOGIN_REDIRECT_COOKIE = 'sbcfiles_login_redirect'
+
+function sanitizeRedirect(raw: string | undefined): string {
+  if (!raw || !raw.startsWith('/')) return '/dashboard'
+  if (raw.startsWith('//') || raw.startsWith('/login') || raw.startsWith('/register')) return '/dashboard'
+  return raw
+}
+
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
@@ -62,8 +70,10 @@ export async function POST(req: Request): Promise<Response> {
     sessionId,
   })
   const store = await cookies()
+  const redirectTo = sanitizeRedirect(store.get(LOGIN_REDIRECT_COOKIE)?.value)
   store.set(ACCESS_COOKIE, accessToken, cookieOptions(15 * 60))
   store.set(REFRESH_COOKIE, rawRefresh, cookieOptions(7 * 24 * 60 * 60))
+  store.delete(LOGIN_REDIRECT_COOKIE)
 
   await logAudit({
     action: 'SESSION_STARTED',
@@ -73,5 +83,5 @@ export async function POST(req: Request): Promise<Response> {
     sessionId,
   })
 
-  return ok({ userId: user.id, name: user.name, email: user.email, role: user.role })
+  return ok({ userId: user.id, name: user.name, email: user.email, role: user.role, redirectTo })
 }

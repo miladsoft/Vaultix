@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ShieldCheck, UserPlus } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
+import { AppLogo } from '@/components/layout/AppLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -56,11 +57,8 @@ export default function RegisterPage() {
           transition={{ duration: 0.45, ease: 'easeOut' }}
         >
           <div className="mb-8 text-center">
-            <div className="mb-3 inline-flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-400 text-slate-950">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-semibold text-white">SBC Files</span>
+            <div className="mb-3 flex justify-center">
+              <AppLogo size="sm" showSubtitle={false} titleClassName="text-xl" />
             </div>
             <p className="text-sm text-slate-400">Secure workspace</p>
           </div>

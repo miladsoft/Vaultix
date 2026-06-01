@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { LockKeyhole, ShieldCheck } from 'lucide-react'
+import { LockKeyhole } from 'lucide-react'
+import { AppLogo } from '@/components/layout/AppLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -15,6 +16,13 @@ async function readApiError(res: Response): Promise<string> {
     return data.error ?? `Request failed with status ${res.status}`
   }
   return `Server error (${res.status}). Check the terminal logs.`
+}
+
+interface LoginSuccessPayload {
+  success: boolean
+  data?: {
+    redirectTo?: string
+  }
 }
 
 export default function LoginPage() {
@@ -35,7 +43,8 @@ export default function LoginPage() {
         body: JSON.stringify(form),
       })
       if (res.ok) {
-        router.push('/dashboard')
+        const payload = (await res.json()) as LoginSuccessPayload
+        router.push(payload.data?.redirectTo || '/dashboard')
         router.refresh()
       } else {
         setError(await readApiError(res))
@@ -62,13 +71,7 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-400 text-slate-950 shadow-lg shadow-teal-950/30">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-lg font-semibold leading-none text-white">SBC Files</p>
-              <p className="mt-1 text-xs text-slate-500">Secure workspace</p>
-            </div>
+            <AppLogo size="lg" />
           </motion.div>
 
           <motion.div
@@ -114,11 +117,8 @@ export default function LoginPage() {
           transition={{ duration: 0.45, ease: 'easeOut' }}
         >
           <div className="mb-8 text-center lg:hidden">
-            <div className="mb-3 inline-flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-400 text-slate-950">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-semibold text-white">SBC Files</span>
+            <div className="mb-3 flex justify-center">
+              <AppLogo size="sm" showSubtitle={false} titleClassName="text-xl" />
             </div>
             <p className="text-sm text-slate-400">Secure workspace</p>
           </div>

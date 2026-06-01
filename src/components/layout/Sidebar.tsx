@@ -10,10 +10,10 @@ import {
   Search,
   Settings,
   Share2,
-  Shield,
   Sparkles,
   Upload,
 } from 'lucide-react'
+import { AppLogo } from '@/components/layout/AppLogo'
 import { cn } from '@/lib/utils'
 
 const nav = [
@@ -43,15 +43,13 @@ export function Sidebar() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800/80 bg-slate-950/85 px-4 backdrop-blur-xl md:hidden">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-400 text-slate-950 shadow-lg shadow-teal-950/30">
-            <Shield className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="block font-semibold leading-none text-white">SBC Files</span>
-            <span className="text-[11px] text-slate-500">Secure data room</span>
-          </div>
-        </Link>
+        <AppLogo
+          href="/dashboard"
+          size="sm"
+          subtitle="Secure data room"
+          titleClassName="text-base"
+          subtitleClassName="text-[11px]"
+        />
         <button
           type="button"
           onClick={signOut}
@@ -64,15 +62,7 @@ export function Sidebar() {
 
       <aside className="hidden h-full w-72 flex-shrink-0 flex-col border-r border-slate-800/80 bg-slate-950/70 backdrop-blur-xl md:flex">
         <div className="border-b border-slate-800/80 p-5">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-400 text-slate-950 shadow-lg shadow-teal-950/30">
-              <Shield className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="block text-lg font-semibold leading-none text-white">SBC Files</span>
-              <span className="text-xs text-slate-500">Enterprise document DRM</span>
-            </div>
-          </Link>
+          <AppLogo href="/dashboard" size="md" subtitle="Enterprise document DRM" />
         </div>
 
         <div className="mx-4 mt-4 flex min-h-10 items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/70 px-3 text-sm text-slate-500">
