@@ -29,6 +29,7 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
   const [isLoading, setIsLoading] = useState(true)
   const [isPreparing, setIsPreparing] = useState(false)
   const [loadError, setLoadError] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [sessionId] = useState(() => uuidv4())
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -77,6 +78,17 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
     }
     window.document.addEventListener('visibilitychange', handleVisibility)
     return () => window.document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(window.document.fullscreenElement === containerRef.current)
+    }
+
+    window.document.addEventListener('fullscreenchange', handleFullscreenChange)
+    handleFullscreenChange()
+
+    return () => window.document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
   // DevTools detection via console timing
@@ -230,6 +242,15 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
     if (page >= 1 && page <= documentMeta.pageCount) setCurrentPage(page)
   }
 
+  const toggleFullscreen = async () => {
+    if (window.document.fullscreenElement === containerRef.current) {
+      await window.document.exitFullscreen?.()
+      return
+    }
+
+    await containerRef.current?.requestFullscreen?.()
+  }
+
   const downloadUrl = `/api/viewer/download?${new URLSearchParams({
     token,
     sessionId,
@@ -258,9 +279,12 @@ export function SecureViewer({ document: documentMeta, token, email, name }: Sec
           </span>
           <button
             type="button"
-            onClick={() => containerRef.current?.requestFullscreen?.()}
+            onClick={() => {
+              void toggleFullscreen()
+            }}
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-800 bg-slate-900 text-slate-300 transition-colors hover:bg-slate-800 focus-ring"
-            aria-label="Fullscreen"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
             <Maximize2 className="h-4 w-4" />
           </button>
